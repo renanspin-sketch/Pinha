@@ -16,3 +16,16 @@ export function mensagemErroAuth(code: string | undefined): string {
       return 'Não deu certo agora. Tente de novo em instantes.';
   }
 }
+
+export function validarNovaSenha(senha: string, confirmacao: string): string | null {
+  if (senha.length < SENHA_MIN) return mensagemErroAuth('weak_password');
+  if (senha !== confirmacao) return 'As senhas não conferem.';
+  return null;
+}
+
+export function siteUrl(env: { SITE_URL?: string; NODE_ENV?: string }): string {
+  const url = env.SITE_URL?.trim();
+  if (url) return url.replace(/\/+$/, '');
+  if (env.NODE_ENV !== 'production') return 'http://127.0.0.1:3000';
+  throw new Error('Configuração ausente: defina SITE_URL com o endereço público do Pinha.');
+}

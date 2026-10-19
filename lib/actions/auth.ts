@@ -1,9 +1,8 @@
 'use server';
 
-import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { SENHA_MIN, mensagemErroAuth, normalizeEmail } from '@/lib/auth';
+import { SENHA_MIN, mensagemErroAuth, normalizeEmail, siteUrl, validarNovaSenha } from '@/lib/auth';
 import { safeNext } from '@/lib/redirect';
 
 export type FormState = { erro?: string; enviado?: boolean };
@@ -13,13 +12,9 @@ function texto(formData: FormData, campo: string): string {
   return typeof v === 'string' ? v : '';
 }
 
-async function origemDaRequisicao(): Promise<string> {
-  const h = await headers();
-  const origin = h.get('origin');
-  if (origin) return origin;
-  const host = h.get('x-forwarded-host') ?? h.get('host');
-  const proto = h.get('x-forwarded-proto') ?? 'http';
-  return `${proto}://${host}`;
+function origemDoSite(): string {
+  // Nunca derivada de cabeçalhos da requisição: evita envenenar links de OAuth e de recuperação.
+  return siteUrl(process.env);
 }
 
 export async function entrar(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -54,7 +49,7 @@ export async function criarConta(_prev: FormState, formData: FormData): Promise<
 }
 
 export async function entrarComGoogle(formData: FormData): Promise<void> {
-  const origin = await origemDaRequisicao();
+  const origin = origemDoSite();
   const next = safeNext(texto(formData, 'next'));
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -72,11 +67,26 @@ export async function enviarLinkRecuperacao(
   const email = normalizeEmail(texto(formData, 'email'));
   if (!email) return { erro: 'Informe o seu e-mail.' };
 
-  const origin = await origemDaRequisicao();
+  const origin = origemDoSite();
   const supabase = await createClient();
   // O resultado não é exibido: a resposta é a mesma exista a conta ou não.
   await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/callback?next=${encodeURIComponent('/configuracoes')}`,
+    redirectTo: `${origin}/auth/callback?next=${encodeURIComponent('/redefinir-senha')}`,
   });
   return { enviado: true };
+}
+
+export async function redefinirSenha(_prev: FormState, formData: FormData): Promise<FormState> {
+  const senha = texto(formData, 'senha');
+  const erro = validarNovaSenha(senha, texto(formData, 'confirmacao'));
+  if (erro) return { erro };
+
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) redirect('/entrar?erro=link');
+
+  const { error } = await supabase.auth.updateUser({ password: senha });
+  if (error) return { erro: mensagemErroAuth(error.code) };
+
+  redirect('/mes');
 }

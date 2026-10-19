@@ -23,6 +23,7 @@ test.each([
   ['/configuracoes/membros', true],
   ['/comecar', true],
   ['/novo', true],
+  ['/redefinir-senha', true],
   ['/entrar', false],
   ['/convite/abc', false],
   ['/mesa', false],

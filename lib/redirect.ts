@@ -7,6 +7,7 @@ export const PROTECTED_PREFIXES = [
   '/recorrentes',
   '/configuracoes',
   '/comecar',
+  '/redefinir-senha',
 ] as const;
 
 /** Só aceita caminhos relativos internos; qualquer outra coisa vira '/mes'. */

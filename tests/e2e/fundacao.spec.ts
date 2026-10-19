@@ -73,4 +73,9 @@ test.describe("com Supabase Auth", () => {
     await page.getByRole("button", { name: "Entrar" }).click();
     await expect(page).toHaveURL(/\/(comecar|mes)$/);
   });
+
+  test("redefinir senha sem sessão manda para o login", async ({ page }) => {
+    await page.goto("/redefinir-senha");
+    await expect(page).toHaveURL(/\/entrar\?next=%2Fredefinir-senha/);
+  });
 });
