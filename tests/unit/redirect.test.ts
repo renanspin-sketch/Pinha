@@ -10,6 +10,12 @@ test.each([
   ['', '/mes'],
   [null, '/mes'],
   [undefined, '/mes'],
+  ['/\t/evil.com', '/mes'],
+  ['/\n/evil.com', '/mes'],
+  ['/\r/evil.com', '/mes'],
+  ['/a\\b', '/mes'],
+  // %0a literal não é caractere de controle e permanece same-origin: aceito como está
+  ['/%0a/evil.com', '/%0a/evil.com'],
 ])('safeNext(%s) = %s', (inp, out) => expect(safeNext(inp)).toBe(out));
 
 test.each([
