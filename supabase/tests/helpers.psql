@@ -7,8 +7,9 @@ create or replace function tests.create_user(nome text) returns uuid
 language plpgsql as $$
 declare v_id uuid;
 begin
-  insert into auth.users (email, raw_user_meta_data)
-  values (nome || '@teste.local', jsonb_build_object('nome', nome))
+  insert into auth.users (id, aud, role, email, raw_user_meta_data)
+  values (gen_random_uuid(), 'authenticated', 'authenticated',
+          nome || '@teste.local', jsonb_build_object('nome', nome))
   returning id into v_id;
   return v_id;
 end $$;

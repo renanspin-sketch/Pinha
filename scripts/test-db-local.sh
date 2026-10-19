@@ -35,17 +35,20 @@ cp -r "$ROOT/supabase/migrations" "$ROOT/supabase/tests" "$STAGE/"
 chmod -R a+rX "$STAGE"
 
 echo "==> shim do Supabase"
-psql_ -d "$DB" -f "$STAGE/tests/local-shim.sql" || exit 1
+psql_ -d "$DB" -f "$ROOT/scripts/db-shim.sql" || exit 1
 
 echo "==> migrations"
-for f in $(ls "$STAGE"/migrations/*.sql | sort); do
+shopt -s nullglob
+MIGS=("$STAGE"/migrations/*.sql)
+[ "${#MIGS[@]}" -gt 0 ] || { echo "nenhuma migration encontrada"; exit 1; }
+for f in "${MIGS[@]}"; do
   echo "  $(basename "$f")"
   psql_ -d "$DB" -f "$f" || { echo "FALHA na migration $f"; exit 1; }
 done
 
 echo "==> testes pgTAP"
 FAIL=0; FILES=0
-for t in $(ls "$STAGE"/tests/*.test.sql 2>/dev/null | sort); do
+for t in "$STAGE"/tests/*.test.sql; do
   FILES=$((FILES+1))
   out="$(cd "$STAGE/tests" && "${RUN[@]}" psql -X -A -t -h "$SOCK" -p "$PORT" -U postgres -d "$DB" -v ON_ERROR_STOP=1 -f "$t" 2>&1)"
   rc=$?

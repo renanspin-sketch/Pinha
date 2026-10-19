@@ -1,4 +1,5 @@
 -- Shim mínimo do Supabase para o cluster temporário local.
+-- Fica fora de supabase/tests de propósito (`supabase test db` o executaria).
 -- Usado SOMENTE por scripts/test-db-local.sh (nunca por CI nem por migrations).
 create role anon nologin;
 create role authenticated nologin;
@@ -11,7 +12,9 @@ create extension if not exists pgtap;
 
 create schema auth;
 create table auth.users (
-  id uuid primary key default gen_random_uuid(),
+  id uuid primary key,  -- sem default, como no GoTrue real
+  aud text,
+  role text,
   email text unique,
   raw_user_meta_data jsonb default '{}',
   created_at timestamptz default now()
