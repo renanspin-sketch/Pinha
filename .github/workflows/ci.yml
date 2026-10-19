@@ -18,7 +18,7 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.120.0
 
       - run: npm ci
 
@@ -39,7 +39,15 @@ jobs:
           supabase status -o env | awk -F= '
             $1=="API_URL"  {print "NEXT_PUBLIC_SUPABASE_URL=" $2}
             $1=="ANON_KEY" {print "NEXT_PUBLIC_SUPABASE_ANON_KEY=" $2}
-          ' | tr -d '"' >> "$GITHUB_ENV"
+          ' | tr -d '"' > supabase-env.txt
+          URL_API="$(grep '^NEXT_PUBLIC_SUPABASE_URL=' supabase-env.txt | cut -d= -f2- || true)"
+          CHAVE_ANON="$(grep '^NEXT_PUBLIC_SUPABASE_ANON_KEY=' supabase-env.txt | cut -d= -f2- || true)"
+          if [ -z "$URL_API" ] || [ -z "$CHAVE_ANON" ]; then
+            echo "::error::'supabase status -o env' não trouxe API_URL e/ou ANON_KEY. Verifique a versão do Supabase CLI e se 'supabase start' subiu."
+            exit 1
+          fi
+          cat supabase-env.txt >> "$GITHUB_ENV"
+          rm supabase-env.txt
           echo "SITE_URL=http://127.0.0.1:3000" >> "$GITHUB_ENV"
 
       - name: Build
