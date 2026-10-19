@@ -100,13 +100,33 @@ test.describe("espaço e shell (com Supabase Auth)", () => {
     await page.getByLabel("Nome do espaço").fill("Família Pinheiro");
     await page.getByRole("button", { name: "Criar espaço" }).click();
     await expect(page).toHaveURL(/\/mes$/);
-    await expect(page.getByText("Família Pinheiro")).toBeVisible();
+    await expect(page.getByRole("main").getByText("Família Pinheiro")).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(
       page.getByRole("navigation", { name: "Navegação principal" }).getByRole("link", { name: "Mês" }),
     ).toBeVisible();
     await expect(page.getByText("by PINDev")).toBeHidden(); // não aparece na tela do dia a dia no celular
+
+    // Sair (no celular, no fim de Pessoas do espaço)
+    await page.goto("/configuracoes/membros");
+    await page.getByRole("button", { name: "Sair" }).click();
+    await expect(page).toHaveURL(/\/entrar$/);
+    await page.goto("/mes");
+    await expect(page).toHaveURL(/\/entrar\?next=%2Fmes$/);
   });
+});
+
+test("raiz manda para o mês (e sem sessão, para o login)", async ({ page }) => {
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/(mes|entrar\?next=%2Fmes)$/);
+});
+
+test("link de confirmação inválido manda para /entrar com aviso", async ({ page }) => {
+  await page.goto("/auth/confirm?token_hash=abc&type=sms&next=/mes");
+  await expect(page).toHaveURL(/\/entrar\?erro=link$/);
+  await expect(page.getByText("O link expirou ou já foi usado. Peça outro.")).toBeVisible();
+  await page.goto("/auth/confirm?type=recovery");
+  await expect(page).toHaveURL(/\/entrar\?erro=link$/);
 });
 
 test("convite sem sessão manda para criar conta com next", async ({ page }) => {
@@ -144,8 +164,13 @@ test.describe("convite entre duas pessoas (com Supabase Auth)", () => {
     await ellen.getByLabel("E-mail").fill(`ellen+${stamp}@teste.com`);
     await ellen.getByLabel("Senha").fill(SENHA);
     await ellen.getByRole("button", { name: "Criar conta" }).click();
+    // Abrir o link só mostra o convite; entrar é um clique
+    await expect(ellen).toHaveURL(/\/convite\//);
+    await expect(ellen.getByRole("heading", { name: "Entrar no espaço Família Pinheiro?" })).toBeVisible();
+    await expect(ellen.getByText("Renan convidou você.")).toBeVisible();
+    await ellen.getByRole("button", { name: "Entrar no espaço" }).click();
     await expect(ellen).toHaveURL(/\/mes$/);
-    await expect(ellen.getByText("Família Pinheiro")).toBeVisible();
+    await expect(ellen.getByRole("main").getByText("Família Pinheiro")).toBeVisible();
 
     // Renan vê Ellen como membro
     await renan.reload();
@@ -157,23 +182,41 @@ test.describe("convite entre duas pessoas (com Supabase Auth)", () => {
     await expect(ellen.getByRole("heading", { name: "Pessoas do espaço" })).toBeVisible();
     await expect(ellen.getByRole("button", { name: "Gerar link de convite" })).toHaveCount(0);
 
-    // Segundo link: Ellen, já membro, vai para /mes sem erro
+    // Segundo link: Renan (dono) e Ellen (já membro) abrem sem gastar o convite
     await renan.getByRole("button", { name: "Gerar link de convite" }).click();
     await expect(renan.getByLabel("Link do convite")).not.toHaveValue(link1);
     const link2 = await renan.getByLabel("Link do convite").inputValue();
+    await renan.goto(link2);
+    await expect(renan.getByText("Você já faz parte de Família Pinheiro.")).toBeVisible();
     await ellen.goto(link2);
+    await expect(ellen.getByText("Você já faz parte de Família Pinheiro.")).toBeVisible();
+    await ellen.getByRole("button", { name: "Ir para o espaço" }).click();
     await expect(ellen).toHaveURL(/\/mes$/);
 
-    // Outra pessoa com o primeiro link (já usado)
+    // Outra pessoa, que já tem o próprio espaço
     await outra.goto("/criar-conta");
     await outra.getByLabel("Nome").fill("Visita");
     await outra.getByLabel("E-mail").fill(`visita+${stamp}@teste.com`);
     await outra.getByLabel("Senha").fill(SENHA);
     await outra.getByRole("button", { name: "Criar conta" }).click();
     await expect(outra).toHaveURL(/\/comecar$/);
+    await expect(outra.getByText("Recebeu um convite? Abra o link que te mandaram.")).toBeVisible();
+    await outra.getByLabel("Nome do espaço").fill("Casa da Visita");
+    await outra.getByRole("button", { name: "Criar espaço" }).click();
+    await expect(outra).toHaveURL(/\/mes$/);
+    await expect(outra.getByRole("main").getByText("Casa da Visita")).toBeVisible();
+
+    // primeiro link (já usado)
     await outra.goto(link1);
     await expect(outra.getByText("Este convite já foi usado.")).toBeVisible();
     await expect(outra.getByRole("link", { name: "Ir para o início" })).toBeVisible();
+
+    // segundo link continua valendo e o espaço aceito passa a ser o atual
+    await outra.goto(link2);
+    await expect(outra.getByRole("heading", { name: "Entrar no espaço Família Pinheiro?" })).toBeVisible();
+    await outra.getByRole("button", { name: "Entrar no espaço" }).click();
+    await expect(outra).toHaveURL(/\/mes$/);
+    await expect(outra.getByRole("main").getByText("Família Pinheiro")).toBeVisible();
 
     await renanCtx.close();
     await ellenCtx.close();

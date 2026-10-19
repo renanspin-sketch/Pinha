@@ -1,8 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { getCurrentSpace } from '@/lib/espaco';
+import { definirEspacoAtual, getCurrentSpace } from '@/lib/espaco';
 import { siteUrl } from '@/lib/auth';
 import { linkConvite, mensagemErroConvite } from '@/lib/convites';
 
@@ -39,9 +40,15 @@ export async function removerMembro(userId: string): Promise<ResultadoSimples> {
   return { ok: true };
 }
 
-export async function aceitarConvite(token: string): Promise<ResultadoSimples> {
+export type AceiteState = { erro?: string };
+
+/** Form de /convite/[token]: entra (ou volta) no espaço, torna-o o atual e vai para /mes. */
+export async function aceitarConvite(_prev: AceiteState, formData: FormData): Promise<AceiteState> {
+  const bruto = formData.get('token');
+  const token = typeof bruto === 'string' ? bruto : '';
   const supabase = await createClient();
-  const { error } = await supabase.rpc('accept_invite', { p_token: token });
-  if (error) return { erro: mensagemErroConvite(error.message) };
-  return { ok: true };
+  const { data, error } = await supabase.rpc('accept_invite', { p_token: token });
+  if (error || typeof data !== 'string') return { erro: mensagemErroConvite(error?.message) };
+  await definirEspacoAtual(data);
+  redirect('/mes');
 }
