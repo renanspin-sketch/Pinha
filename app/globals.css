@@ -40,14 +40,17 @@
   --spacing-6: var(--space-6);
   --spacing-8: var(--space-8);
 
-  --radius-sm: var(--radius-sm);
-  --radius-md: var(--radius-md);
-  --radius-lg: var(--radius-lg);
-  --radius-xl: var(--radius-xl);
-  --radius-pill: var(--radius-pill);
-
-  --shadow-raised: var(--shadow-raised);
+  /* Escalas padrão do Tailwind de raio e sombra removidas: as utilities vêm dos tokens (abaixo). */
+  --radius-*: initial;
+  --shadow-*: initial;
 }
+
+@utility rounded-sm { border-radius: var(--radius-sm); }
+@utility rounded-md { border-radius: var(--radius-md); }
+@utility rounded-lg { border-radius: var(--radius-lg); }
+@utility rounded-xl { border-radius: var(--radius-xl); }
+@utility rounded-pill { border-radius: var(--radius-pill); }
+@utility shadow-raised { box-shadow: var(--shadow-raised); }
 
 html {
   color-scheme: light dark;
