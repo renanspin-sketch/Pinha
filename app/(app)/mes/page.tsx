@@ -2,7 +2,9 @@ import { cookies } from 'next/headers';
 import { getCurrentSpace } from '@/lib/espaco';
 import { rotuloMes } from '@/lib/datas';
 import { lerTema } from '@/lib/tema';
+import Link from 'next/link';
 import { ThemeToggle } from '@/components/shell/ThemeToggle';
+import { Icone } from '@/components/shell/Icone';
 
 export default async function MesPage() {
   const espaco = await getCurrentSpace();
@@ -21,8 +23,16 @@ export default async function MesPage() {
             {rotuloMes(new Date())}
           </h1>
         </div>
-        <div className="md:hidden">
+        <div className="flex items-center md:hidden" style={{ gap: 'var(--space-2)' }}>
           <ThemeToggle inicial={tema} />
+          <Link
+            href="/configuracoes/membros"
+            aria-label="Configurações"
+            className="inline-flex items-center justify-center rounded-md border border-line-strong bg-surface-raised text-ink"
+            style={{ width: '44px', height: '44px' }}
+          >
+            <Icone id="config" />
+          </Link>
         </div>
       </header>
       <p className="text-ink-muted">O resumo do mês chega na próxima fase.</p>
