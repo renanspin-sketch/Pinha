@@ -6,6 +6,7 @@ import { Avatar } from '@/components/membros/Avatar';
 import { GerarConvite } from '@/components/membros/GerarConvite';
 import { CancelarConvite } from '@/components/membros/CancelarConvite';
 import { RemoverMembro } from '@/components/membros/RemoverMembro';
+import { BotaoSair } from '@/components/shell/BotaoSair';
 
 type Perfil = { nome: string | null; apelido: string | null };
 type LinhaMembro = {
@@ -140,6 +141,9 @@ export default async function MembrosPage() {
           )}
         </>
       )}
+
+      {/* No PC o Sair fica no rodapé do menu lateral. */}
+      <BotaoSair className="md:hidden" />
     </section>
   );
 }

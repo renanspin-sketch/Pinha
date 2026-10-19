@@ -4,8 +4,10 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { SENHA_MIN, mensagemErroAuth, normalizeEmail, siteUrl, validarNovaSenha } from '@/lib/auth';
 import { safeNext } from '@/lib/redirect';
+import { urlConfirmacaoEmail } from '@/lib/confirmacao';
+import { limparEspacoAtual } from '@/lib/espaco';
 
-export type FormState = { erro?: string; enviado?: boolean };
+export type FormState = { erro?: string; enviado?: boolean; email?: string };
 
 function texto(formData: FormData, campo: string): string {
   const v = formData.get(campo);
@@ -37,15 +39,18 @@ export async function criarConta(_prev: FormState, formData: FormData): Promise<
   if (!email) return { erro: 'Informe o seu e-mail.' };
   if (senha.length < SENHA_MIN) return { erro: mensagemErroAuth('weak_password') };
 
+  const next = safeNext(texto(formData, 'next'));
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password: senha,
-    options: { data: { nome } },
+    options: { data: { nome }, emailRedirectTo: urlConfirmacaoEmail(origemDoSite(), next) },
   });
   if (error) return { erro: mensagemErroAuth(error.code) };
+  // Confirmação de e-mail ligada (produção): sem sessão até a pessoa abrir o link.
+  if (!data.session) return { enviado: true, email };
 
-  redirect(safeNext(texto(formData, 'next')));
+  redirect(next);
 }
 
 export async function entrarComGoogle(formData: FormData): Promise<void> {
@@ -70,9 +75,14 @@ export async function enviarLinkRecuperacao(
   const origin = origemDoSite();
   const supabase = await createClient();
   // O resultado não é exibido: a resposta é a mesma exista a conta ou não.
-  await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/callback?next=${encodeURIComponent('/redefinir-senha')}`,
+  // O link do e-mail (template de recuperação) vai a /auth/confirm?type=recovery&next=/redefinir-senha.
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/redefinir-senha`,
   });
+  if (error) {
+    // Sem o e-mail no log.
+    console.error('resetPasswordForEmail falhou', { code: error.code, status: error.status });
+  }
   return { enviado: true };
 }
 
@@ -89,4 +99,11 @@ export async function redefinirSenha(_prev: FormState, formData: FormData): Prom
   if (error) return { erro: mensagemErroAuth(error.code) };
 
   redirect('/mes');
+}
+
+export async function sair(): Promise<void> {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  await limparEspacoAtual();
+  redirect('/entrar');
 }

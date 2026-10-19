@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Logo } from '@/components/brand/Logo';
 import { Icone } from './Icone';
 import { ThemeToggle } from './ThemeToggle';
+import { BotaoSair } from './BotaoSair';
 import { ITENS_NAV, itemAtivo } from './navegacao';
 
 export function Sidebar({ nomeEspaco, temaInicial }: { nomeEspaco: string; temaInicial: 'system' | 'light' | 'dark' }) {
@@ -47,6 +48,7 @@ export function Sidebar({ nomeEspaco, temaInicial }: { nomeEspaco: string; temaI
       </nav>
       <div className="flex flex-col" style={{ marginTop: 'auto', gap: 'var(--space-4)', padding: '0 var(--space-2)' }}>
         <ThemeToggle inicial={temaInicial} />
+        <BotaoSair />
         <Logo variant="assinatura" />
       </div>
     </aside>

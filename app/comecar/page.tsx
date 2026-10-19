@@ -8,6 +8,9 @@ export default async function ComecarPage() {
   return (
     <AuthShell titulo="Vamos criar o espaço da sua casa">
       <CriarEspacoForm />
+      <p className="text-ink-muted" style={{ fontWeight: 600 }}>
+        Recebeu um convite? Abra o link que te mandaram.
+      </p>
     </AuthShell>
   );
 }

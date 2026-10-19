@@ -7,6 +7,13 @@ import { Aviso, BotaoPrimario, Campo } from './ui';
 
 export function CriarContaForm({ next }: { next?: string }) {
   const [state, action, pendente] = useActionState<FormState, FormData>(criarConta, {});
+  if (state.enviado) {
+    return (
+      <Aviso tipo="ok">
+        Enviamos um link para {state.email}. Abra o e-mail para confirmar sua conta e continuar.
+      </Aviso>
+    );
+  }
   return (
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="next" value={next ?? ''} />
