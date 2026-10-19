@@ -79,3 +79,32 @@ test.describe("com Supabase Auth", () => {
     await expect(page).toHaveURL(/\/entrar\?next=%2Fredefinir-senha/);
   });
 });
+
+test("manifest do app é servido", async ({ request }) => {
+  const res = await request.get("/manifest.webmanifest");
+  expect(res.ok()).toBeTruthy();
+  const m = await res.json();
+  expect(m.name).toBe("Pinha");
+  expect(m.display).toBe("standalone");
+});
+
+test.describe("espaço e shell (com Supabase Auth)", () => {
+  test.skip(SEM_SUPABASE, "requer Supabase");
+
+  test("cria o espaço e vê o mês", async ({ page }) => {
+    await criar(page, `Renan+${Date.now()}@Teste.com`);
+    await expect(page).toHaveURL(/\/comecar$/);
+    await expect(page.getByRole("heading", { name: "Vamos criar o espaço da sua casa" })).toBeVisible();
+    await page.getByRole("button", { name: "Criar espaço" }).click();
+    await expect(page.getByText("Dê um nome ao espaço")).toBeVisible();
+    await page.getByLabel("Nome do espaço").fill("Família Pinheiro");
+    await page.getByRole("button", { name: "Criar espaço" }).click();
+    await expect(page).toHaveURL(/\/mes$/);
+    await expect(page.getByText("Família Pinheiro")).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(
+      page.getByRole("navigation", { name: "Navegação principal" }).getByRole("link", { name: "Mês" }),
+    ).toBeVisible();
+    await expect(page.getByText("by PINDev")).toBeHidden(); // não aparece na tela do dia a dia no celular
+  });
+});
