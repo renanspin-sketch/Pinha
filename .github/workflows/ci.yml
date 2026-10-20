@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+
+      - run: npm ci
+
+      - name: Subir o Supabase local
+        run: supabase start
+
+      - name: Testes de banco
+        run: supabase test db
+
+      - name: Testes unitários
+        run: npm run test:unit
+
+      - name: Instalar Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Variáveis do Supabase local
+        run: |
+          supabase status -o env | awk -F= '
+            $1=="API_URL"  {print "NEXT_PUBLIC_SUPABASE_URL=" $2}
+            $1=="ANON_KEY" {print "NEXT_PUBLIC_SUPABASE_ANON_KEY=" $2}
+          ' | tr -d '"' > supabase-env.txt
+          URL_API="$(grep '^NEXT_PUBLIC_SUPABASE_URL=' supabase-env.txt | cut -d= -f2- || true)"
+          CHAVE_ANON="$(grep '^NEXT_PUBLIC_SUPABASE_ANON_KEY=' supabase-env.txt | cut -d= -f2- || true)"
+          if [ -z "$URL_API" ] || [ -z "$CHAVE_ANON" ]; then
+            echo "::error::'supabase status -o env' não trouxe API_URL e/ou ANON_KEY. Verifique a versão do Supabase CLI e se 'supabase start' subiu."
+            exit 1
+          fi
+          cat supabase-env.txt >> "$GITHUB_ENV"
+          rm supabase-env.txt
+          echo "SITE_URL=http://127.0.0.1:3000" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: npm run build
+
+      - name: Testes e2e
+        run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
